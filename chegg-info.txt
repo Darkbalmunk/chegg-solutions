@@ -1,0 +1,17 @@
+HEADERS = {
+    "access_token": "oLcvbEYTgZEETCrnZlmXLdcp83ef",
+    "X-CHEGG-DEVICEID": "b90c9fcc43bcc375110d0a1771dac016fd3caf48",
+    "X-CHEGG-SESSIONID": "82f47f42-662f-4141-8493-47ee831a0e0c",
+    "Authorization": "Basic aGxEcFpBUEYwNW1xakFtZzdjcXRJS0xPaFVyeUI4cDE6dUJqemFrbXhHeDZXdHFBcg==",
+    "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 5.1.1; A0001 Build/LMY48B)",
+    "host": "hub.chegg.com",
+    "Connection": "Keep-Alive",
+    "Accept-Encoding": "gzip"
+}
+
+Getting an access token:
+    url: https://hub.chegg.com/oauth/token
+    params:
+        username:   (email)
+        password:   (password)
+        grant_type: "password" (not your password, the string "password")
