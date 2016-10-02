@@ -8,9 +8,9 @@ import time
 
 HEADERS = {
     # "access_token": "",
-    "X-CHEGG-DEVICEID": ,
+    "X-CHEGG-DEVICEID": "",
     # "X-CHEGG-SESSIONID": "",
-    "Authorization": ,
+    "Authorization": "",
     "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 5.1.1; A0001 Build/LMY48B)",
     "host": "hub.chegg.com",
     "Connection": "Keep-Alive",
@@ -35,7 +35,19 @@ class Token:
             return False
 
     def refresh(self):
-        pass
+        url = "https://hub.chegg.com/oauth/refreshToken"
+        data = {
+            grant_type: "refresh_token"
+            refresh_token: self.refresh_token
+        }
+
+        del HEADERS["access_token"]
+
+        response = requests.post(url, data=data, headers=HEADERS)
+        self.access_token = response["access_token"]
+        self.refresh_token = response["refresh_token"]
+        self.expires_in = response["expires_in"]
+        self.issued_at = response["issued_at"]
 
 
 class Chapter:

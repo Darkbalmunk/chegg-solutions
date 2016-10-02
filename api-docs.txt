@@ -1,0 +1,154 @@
+POST? https://hub.chegg.com/oauth/token
+    - Get an access token
+    - params:
+        username:   (email)
+        password:   (password)
+        grant_type: "password" (not your password, the string "password")
+
+
+POST https://hub.chegg.com/oauth/refreshToken
+    - refresh an existing access token
+    - params:
+        grant_type:    "refresh_token"
+        refresh_token: (refresh_token)
+
+GET https://hub.chegg.com/v1/book/<book_isbn>
+    - General book info
+    - Sample response to  https://hub.chegg.com/v1/book/9781118539712:
+        {
+            "errors": [],
+            "httpCode": 200,
+            "result": {
+                "authors": [
+                    "Montgomery, Douglas C.",
+                    "Runger, George C."
+                ],
+                "ean": "9781118539712",
+                "ebookEan": "9781118802267",
+                "ebookIsbn": null,
+                "edition": "6",
+                "fullTitle": "Applied Statistics and Probability for Engineers 6th Edition ; Montgomery, Douglas C. ; Runger, George C.",
+
+                "hasSolutions": true,
+                "img180px": "http://cs.cheggcdn.com/covers2/40580000/40582944_1465807610_Width144.jpg",
+                "img360px": "http://cs.cheggcdn.com/covers2/40580000/40582944_1465807610_Width288.jpg",
+                "img500px": "http://cs.cheggcdn.com/covers2/40580000/40582944_1465807610_Width400.jpg",
+                "imgLarge": "http://cs.cheggcdn.com/covers2/40580000/40582944_1465807610.jpg",
+                "imgThumb": "http://cs.cheggcdn.com/covers2/40580000/40582944_1465807610.jpg",
+                "isEbook": false,
+                "isbn": "1118539710",
+                "isbn10": "1118539710",
+                "isbn13": "9781118539712",
+                "solutionCount": 1994,
+                "title": "Applied Statistics and Probability for Engineers"
+            }
+        }
+
+GET https://hub.chegg.com/v1/book/<book_isbn>/chapters
+    - List of book chapters
+    - params:
+        limit (largest number of chapters to send)
+        offset (start from this chapter)
+    - sample response to https://hub.chegg.com/v1/book/9781118539712/chapters?limit=100&offset=0:
+        {
+            "errors": [],
+            "httpCode": 200,
+            "result": [
+                {
+                    "id": "504690",
+                    "name": "2.1"
+                },
+                {
+                    "id": "504691",
+                    "name": "2.2"
+                },
+                ...
+            ]
+        }
+
+
+GET https://hub.chegg.com/v1/chapter/<chapter_id>/problems
+    - List of problems in a chapter
+    - params:
+        limit
+        offset
+    - sample response to: https://hub.chegg.com/v1/chapter/504690/problems?limit=100&offset=0
+        {
+            "errors": [],
+            "httpCode": 200,
+            "result": [
+                {
+                    "chapter": "504690",
+                    "hasSolution": true,
+                    "id": "22232341",
+                    "link": "https://hub.chegg.com/content/tbs-problem/22232341.html",
+                    "name": "1E"
+                },
+                {
+                    "chapter": "504690",
+                    "hasSolution": true,
+                    "id": "22232342",
+                    "link": "https://hub.chegg.com/content/tbs-problem/22232342.html",
+                    "name": "2E"
+                },
+                {
+                    "chapter": "504690",
+                    "hasSolution": true,
+                    "id": "22232343",
+                    "link": "https://hub.chegg.com/content/tbs-problem/22232343.html",
+                    "name": "3E"
+                },
+                ...
+            ]
+        }
+
+POST https://hub.chegg.com/v1/tbs/_/solutions
+    - Get list of steps for a problem solutions. Includes links the actual steps
+    which come in html or image form.
+    - params:
+        action (possible values: "Access", ..)
+        isbn13 (of book),
+        problemId
+        userAgent (possible values: "Mobile", ..)
+    - sample response to https://hub.chegg.com/v1/tbs/_/solutions
+    with params:
+    {
+        "action": "Access",
+        "isbn13": "9781118539712",
+        "problemId": "22232341",
+        "userAgent": "Mobile"
+    }
+
+        {
+            "errors": [],
+            "httpCode": 200,
+            "result": {
+                "solutions": [
+                    {
+                        "accessDetails": {
+                            "availableAccess": null,
+                            "errorCode": null,
+                            "hasAccess": true,
+                            "isNewConsumption": null,
+                            "offerName": null,
+                            "offeredQuantity": null
+                        },
+                        "contentType": "text/html",
+                        "id": "220745",
+                        "ratings": {
+                            "average": null,
+                            "count": 0,
+                            "myRating": null
+                        },
+                        "steps": [
+                            {
+                                "commentCount": 0,
+                                "link": "https://hub.chegg.com/content/tbs-solution/220745-0.html?expires=1475444516812&contentKey=D1Lvv7
+        3vv71d77-9Re-_ve-_vQA477-9Oz_vv70L77-977-9bu-_vQ"
+                            }
+                        ],
+                        "totalSteps": 1
+                    }
+                ]
+            }
+        }
