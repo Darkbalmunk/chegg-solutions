@@ -1,21 +1,31 @@
 #!/usr/bin/python3
 import requests
 import time
+import os
+import json
 
 # TODO figure out how to get sessionid
-# TODO figure out how to refresh a token
-# TODO test token.expired method
+# TODO figure out how to get Authorization key
+# TODO sit down and actually plan this thing out...
 
 HEADERS = {
     # "access_token": "",
-    "X-CHEGG-DEVICEID": "",
+    # "X-CHEGG-DEVICEID": "",
     # "X-CHEGG-SESSIONID": "",
-    "Authorization": "",
+    # "Authorization": "",
     "User-Agent": "Dalvik/2.1.0 (Linux; U; Android 5.1.1; A0001 Build/LMY48B)",
     "host": "hub.chegg.com",
     "Connection": "Keep-Alive",
     "Accept-Encoding": "gzip"
 }
+
+TOKEN = None
+
+
+def set_auth(username, password, auth_key):
+    HEADERS["Authorization"] = auth_key
+    TOKEN = get_new_token(username, password)
+    HEADERS["access_token"] = TOKEN.access_token
 
 
 class Token:
@@ -29,46 +39,39 @@ class Token:
     def expired(self):
         current_time = time.time()
         expiration_time = self.issued_at + self.expires_in
-        if (expiration_time > current_time or (current_time - expiration_time) <= 5):
-            return True
-        else:
-            return False
+        return expiration_time > current_time
 
     def refresh(self):
         url = "https://hub.chegg.com/oauth/refreshToken"
         data = {
-            grant_type: "refresh_token"
-            refresh_token: self.refresh_token
+            "grant_type": "refresh_token",
+            "refresh_token": self.refresh_token
         }
 
-        del HEADERS["access_token"]
+        response = requests.post(url, data=data, headers=HEADERS).json()
+        print("res: " + str(response))
 
-        response = requests.post(url, data=data, headers=HEADERS)
         self.access_token = response["access_token"]
         self.refresh_token = response["refresh_token"]
         self.expires_in = response["expires_in"]
         self.issued_at = response["issued_at"]
 
+    def as_dict(self):
+        return {
+            "access_token": self.access_token,
+            "refresh_token": self.refresh_token,
+            "expires_in": self.expires_in,
+            "issued_at": self.issued_at,
+            "chegg_id": self.chegg_id
+        }
 
-class Chapter:
-    def __init__(self, id, name, book_isbn, solutions=[]):
-        self.solutions = []
-        self.id = id
-        self.name = name
-        self.book_isbn = book_isbn
-
-
-class Solution:
-    def __init__(self, id, name, has_solution, chapter_id, book_isbn, steps=[]):
-        self.id = id
-        self.name = name
-        self.chapter_id = chapter_id
-        self.book_isbn = book_isbn
-        self.has_solution = has_solution
-        self.steps = steps
+    def write_to_file(self, filename):
+        with open(filename, "w") as output_file:
+            json.dump(self.as_dict(), output_file)
 
 
-def get_token(username, password):
+def get_new_token(username, password):
+    """ Retrieves a token using the api """
     url = "https://hub.chegg.com/oauth/token"
     data = {
         "username": username,
@@ -83,6 +86,51 @@ def get_token(username, password):
         expires_in=int(response["expires_in"]),
         chegg_id=response["chegg_id"]
     )
+
+
+def get_token(filename):
+    """ Looks for a token in a json token file """
+    with open(filename, "r") as token_file:
+        json_token = json.load(token_file)
+
+    return Token(
+        access_token=json_token["access_token"],
+        refresh_token=json_token["refresh_token"],
+        issued_at=int(json_token["issued_at"]),
+        expires_in=int(json_token["expires_in"]),
+        chegg_id=json_token["chegg_id"]
+    )
+
+
+class Book:
+    def __init__(self, isbn13, title, authors, isbn10=None, isbn=None, edition=None):
+        self.isbn13 = isbn13
+        self.isbn10 = isbn10
+        self.isbn = isbn
+        self.title = title
+        self.edition = edition
+        self.authors = authors
+
+
+def get_book(isbn13):
+    url = "https://hub.chegg.com/v1/book/" + str(isbn13)
+    response = requests.get(url, headers=HEADERS).json()["result"]
+
+    return Book(
+        isbn13=response["isbn13"],
+        isbn10=response["isbn10"],
+        isbn=response["isbn"],
+        title=response["title"],
+        authors=response["authors"],
+        edition=response["edition"]
+    )
+
+
+class Chapter:
+    def __init__(self, id, name, book_isbn):
+        self.id = id
+        self.name = name
+        self.book_isbn = book_isbn
 
 
 def get_chapters(isbn):
@@ -102,31 +150,46 @@ def get_chapters(isbn):
     return chapters
 
 
-def get_solutions(chapter):
+class Problem:
+    def __init__(self, id, name, has_solution, chapter_id, book_isbn, steps=[]):
+        self.id = id
+        self.name = name
+        self.chapter_id = chapter_id
+        self.book_isbn = book_isbn
+        self.has_solution = has_solution == "true"
+        self.steps = steps
+
+
+def get_problems(chapter):
     url = "https://hub.chegg.com/v1/chapter/" + chapter.id + "/problems?limit=100&offset=0"
     response = requests.get(url, headers=HEADERS).json()
 
-    solutions = []
+    problems = []
 
-    for json_solution in response["result"]:
-        solution = Solution(
-            id=json_solution["id"],
-            name=json_solution["name"],
-            chapter_id=json_solution["chapter"],
-            has_solution=json_solution["hasSolution"] == "True",
+    for json_problem in response["result"]:
+        problem = Problem(
+            id=json_problem["id"],
+            name=json_problem["name"],
+            chapter_id=json_problem["chapter"],
+            has_solution=json_problem["hasSolution"] == "True",
             book_isbn=chapter.book_isbn
         )
-        solutions += [solution]
-    return solutions
+        problems += [problem]
+    return problems
 
 
-def get_steps(solution):
+class Solution:
+    def __init__(self):
+        pass
+
+
+def get_steps(problem):
     url = "https://hub.chegg.com/v1/tbs/_/solutions"
 
     json = {
         "action": "Access",
-        "isbn13": solution.book_isbn,
-        "problemId": solution.id,
+        "isbn13": problem.book_isbn,
+        "problemId": problem.id,
         "userAgent": "Mobile"
     }
 
@@ -135,16 +198,3 @@ def get_steps(solution):
 
     response = requests.post(url, json=json, headers=HEADERS).json()
     print(response)
-
-
-def main():
-    token = get_token()
-    HEADERS["access_token"] = token.access_token
-    isbn = 9781118539712
-    chapters = get_chapters(isbn)
-    solutions = get_solutions(chapters[0])
-    get_steps(solutions[25])
-
-
-if __name__ == "__main__":
-    main()
